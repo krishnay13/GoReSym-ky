@@ -64,9 +64,11 @@ type ExtractMetadata struct {
 	Files         []string
 	UserFunctions []FuncMetadata
 	StdFunctions  []FuncMetadata
+	// Optional extracted printable strings (when -strings is enabled)
+	Strings       *StringsResult `json:",omitempty"`
 }
 
-func main_impl_tmpfile(fileBytes []byte, printStdPkgs bool, printFilePaths bool, printTypes bool, noPrintFunctions bool, manualTypeAddress int, versionOverride string) (metadata ExtractMetadata, err error) {
+func main_impl_tmpfile(fileBytes []byte, printStdPkgs bool, printFilePaths bool, printTypes bool, noPrintFunctions bool, manualTypeAddress int, versionOverride string, extractStringsFlag bool) (metadata ExtractMetadata, err error) {
 	tmpFile, err := os.CreateTemp(os.TempDir(), "goresym_tmp-")
 	if err != nil {
 		return ExtractMetadata{}, fmt.Errorf("failed to create temporary file: %s", err)
@@ -81,10 +83,10 @@ func main_impl_tmpfile(fileBytes []byte, printStdPkgs bool, printFilePaths bool,
 		return ExtractMetadata{}, fmt.Errorf("failed to close temporary file: %s", err)
 	}
 
-	return main_impl(tmpFile.Name(), printStdPkgs, printFilePaths, printTypes, noPrintFunctions, manualTypeAddress, versionOverride)
+	return main_impl(tmpFile.Name(), printStdPkgs, printFilePaths, printTypes, noPrintFunctions, manualTypeAddress, versionOverride, extractStringsFlag)
 }
 
-func main_impl(fileName string, printStdPkgs bool, printFilePaths bool, printTypes bool, noPrintFunctions bool, manualTypeAddress int, versionOverride string) (metadata ExtractMetadata, err error) {
+func main_impl(fileName string, printStdPkgs bool, printFilePaths bool, printTypes bool, noPrintFunctions bool, manualTypeAddress int, versionOverride string, extractStringsFlag bool) (metadata ExtractMetadata, err error) {
 	extractMetadata := ExtractMetadata{}
 
 	file, err := objfile.Open(fileName)
@@ -309,6 +311,13 @@ restartParseWithRealTextBase:
 		}
 	}
 
+	// Extract printable strings if requested
+	if extractStringsFlag {
+		if res, err := extractStrings(file, 6); err == nil {
+			extractMetadata.Strings = res
+		}
+	}
+
 	return extractMetadata, nil
 }
 
@@ -400,6 +409,31 @@ func printForHuman(metadata ExtractMetadata) {
 	} else {
 		fmt.Println("<NO STANDARD FUNCTIONS EXTRACTED>")
 	}
+
+	// Strings summary (human view)
+	fmt.Println("\n-Extracted Strings-")
+	if metadata.Strings != nil && len(metadata.Strings.Strings) > 0 {
+		total := metadata.Strings.Count
+		fmt.Printf("Total: %d\n", total)
+		max := 20
+		if len(metadata.Strings.Strings) < max {
+			max = len(metadata.Strings.Strings)
+		}
+		for i := 0; i < max; i++ {
+			si := metadata.Strings.Strings[i]
+			// Print value (trim newlines), address and section
+			val := strings.ReplaceAll(si.Value, "\n", " ")
+			if len(val) > 120 { // keep line readable
+				val = val[:117] + "..."
+			}
+			fmt.Printf("[%02d] 0x%x %-8s %s\n", i, si.Address, si.Section, val)
+		}
+		if total > max {
+			fmt.Printf("... and %d more\n", total-max)
+		}
+	} else {
+		fmt.Println("<NO STRINGS EXTRACTED>")
+	}
 }
 
 func DataToJson(data interface{}) string {
@@ -431,6 +465,7 @@ func main() {
 	typeAddress := flag.Int("m", 0, "Manually parse the RTYPE at the provided virtual address, disables automated enumeration of moduledata typelinks itablinks")
 	versionOverride := flag.String("v", "", "Override the automated version detection, ex: 1.17. If this is wrong, parsing may fail or produce nonsense")
 	humanView := flag.Bool("human", false, "Human view, print information flat rather than json, some information is omitted for clarity")
+	extractStringsFlag := flag.Bool("strings", false, "Extract printable strings from the binary")
 	flag.Parse()
 
 	if *about {
@@ -449,7 +484,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	metadata, err := main_impl(flag.Arg(0), *printStdPkgs, *printFilePaths, *printTypes, *noPrintFunctions, *typeAddress, *versionOverride)
+	metadata, err := main_impl(flag.Arg(0), *printStdPkgs, *printFilePaths, *printTypes, *noPrintFunctions, *typeAddress, *versionOverride, *extractStringsFlag)
 	if err != nil {
 		fmt.Println(TextToJson("error", fmt.Sprintf("Failed to parse file: %s", err)))
 		os.Exit(1)

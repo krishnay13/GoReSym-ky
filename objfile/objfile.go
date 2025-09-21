@@ -52,6 +52,8 @@ type rawFile interface {
 	moduledata_scan(pclntabVA uint64, is64bit bool, littleendian bool, ignorelist []uint64) (candidate *ModuleDataCandidate, err error)
 	read_memory(VA uint64, size uint64) (data []byte, err error)
 	text() (textStart uint64, text []byte, err error)
+	rdata() (textStart uint64, text []byte, err error)
+	rel_rdata() (textStart uint64, text []byte, err error)
 	goarch() string
 	loadAddress() (uint64, error)
 	dwarf() (*dwarf.Data, error)
@@ -150,6 +152,16 @@ func (f *File) ParseITabLinks(runtimeVersion string, moduleData *ModuleData, is6
 
 func (f *File) Text() (uint64, []byte, error) {
 	return f.entries[0].Text()
+}
+
+// RData returns the .rodata equivalent if supported by the underlying format.
+func (f *File) RData() (uint64, []byte, error) {
+	return f.entries[0].RData()
+}
+
+// RelRData returns the .data.rel.ro equivalent if supported by the underlying format.
+func (f *File) RelRData() (uint64, []byte, error) {
+	return f.entries[0].RelRData()
 }
 
 func (f *File) GOARCH() string {
@@ -2129,6 +2141,14 @@ func (e *Entry) ParseITabLinks(runtimeVersion string, moduleData *ModuleData, is
 
 func (e *Entry) Text() (uint64, []byte, error) {
 	return e.raw.text()
+}
+
+func (e *Entry) RData() (uint64, []byte, error) {
+	return e.raw.rdata()
+}
+
+func (e *Entry) RelRData() (uint64, []byte, error) {
+	return e.raw.rel_rdata()
 }
 
 func (e *Entry) GOARCH() string {

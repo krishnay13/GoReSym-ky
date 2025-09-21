@@ -355,6 +355,11 @@ func (f *goobjFile) rdata() (textStart uint64, text []byte, err error) {
 	return
 }
 
+func (f *goobjFile) rel_rdata() (textStart uint64, text []byte, err error) {
+	// For object files, treat rel.rdata same as rdata.
+	return f.rdata()
+}
+
 func (f *goobjFile) goarch() string {
 	return f.goobj.Arch
 }

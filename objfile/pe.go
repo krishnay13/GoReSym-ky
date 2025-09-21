@@ -455,6 +455,13 @@ func (f *peFile) rdata() (textStart uint64, text []byte, err error) {
 	return
 }
 
+// rel_rdata returns the .data.rel.ro equivalent for PE. Many PE files do not
+// have a direct equivalent; fall back to .rdata when unavailable.
+func (f *peFile) rel_rdata() (textStart uint64, text []byte, err error) {
+	// PE typically does not separate .data.rel.ro like ELF. Reuse .rdata.
+	return f.rdata()
+}
+
 func findPESymbol(f *pe.File, name string) (*pe.Symbol, error) {
 	for _, s := range f.Symbols {
 		if s.Name != name {

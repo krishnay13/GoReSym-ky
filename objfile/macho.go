@@ -387,6 +387,17 @@ func (f *machoFile) rdata() (textStart uint64, text []byte, err error) {
 	return
 }
 
+// rel_rdata returns a read-only data equivalent if available on Mach-O.
+// Prefer __DATA_CONST if present; otherwise fall back to __DATA.
+func (f *machoFile) rel_rdata() (textStart uint64, text []byte, err error) {
+	if sect := f.macho.Section("__DATA_CONST"); sect != nil {
+		textStart = sect.Addr
+		text, err = sect.Data()
+		return
+	}
+	return f.rdata()
+}
+
 func (f *machoFile) goarch() string {
 	switch f.macho.Cpu {
 	case macho.Cpu386:
