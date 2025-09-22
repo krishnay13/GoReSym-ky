@@ -64,8 +64,8 @@ type ExtractMetadata struct {
 	Files         []string
 	UserFunctions []FuncMetadata
 	StdFunctions  []FuncMetadata
-	// Optional extracted printable strings (when -strings is enabled)
-	Strings       *StringsResult `json:",omitempty"`
+	// Extracted strings (when -strings is enabled)
+	Strings *StringsResult `json:",omitempty"`
 }
 
 func main_impl_tmpfile(fileBytes []byte, printStdPkgs bool, printFilePaths bool, printTypes bool, noPrintFunctions bool, manualTypeAddress int, versionOverride string, extractStringsFlag bool) (metadata ExtractMetadata, err error) {
@@ -311,7 +311,7 @@ restartParseWithRealTextBase:
 		}
 	}
 
-	// Extract printable strings if requested
+	// Extract strings if requested
 	if extractStringsFlag {
 		if res, err := extractStrings(file, 6); err == nil {
 			extractMetadata.Strings = res

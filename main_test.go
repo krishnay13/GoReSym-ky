@@ -214,7 +214,7 @@ func TestWeirdBins(t *testing.T) {
 			return
 		}
 
-	_, err := main_impl(filePath, true, true, true, false, 0, "", false)
+		_, err := main_impl(filePath, true, true, true, false, 0, "", false)
 		if err == nil {
 			t.Errorf("GoReSym found pclntab in a non-go binary, this is not possible.")
 		}
@@ -228,7 +228,7 @@ func TestWeirdBins(t *testing.T) {
 			return
 		}
 
-	_, err := main_impl(filePath, true, true, true, false, 0, "", false)
+		_, err := main_impl(filePath, true, true, true, false, 0, "", false)
 		if err == nil {
 			t.Errorf("GoReSym found pclntab in a non-go binary, this is not possible.")
 		}
